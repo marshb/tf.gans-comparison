@@ -14,11 +14,12 @@ class BEGAN(BaseModel):
         self.beta1 = 0.5
         self.lambd_k = 0.001
         self.nf = 128
-        super(BEGAN, self).__init__(name=name, training=training, D_lr=D_lr, G_lr=G_lr, 
+        super(BEGAN, self).__init__(name=name, training=training, D_lr=D_lr, G_lr=G_lr,
             image_shape=image_shape, z_dim=z_dim)
 
     def _build_train_graph(self):
         with tf.variable_scope(self.name):
+
             X = tf.placeholder(tf.float32, [None] + self.shape)
             z = tf.placeholder(tf.float32, [None, self.z_dim])
             global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -37,7 +38,7 @@ class BEGAN(BaseModel):
                 balance = self.gamma*D_real_energy - D_fake_energy
             with tf.variable_scope('M'):
                 M = D_real_energy + tf.abs(balance)
-            
+
             D_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name+'/D/')
             G_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name+'/G/')
 

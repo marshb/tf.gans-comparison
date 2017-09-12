@@ -29,7 +29,7 @@ def get_best_gpu():
 
     # byte to megabyte
     def to_mb(x):
-        return int(x/1024./1024.) 
+        return int(x/1024./1024.)
 
     best_idx = -1
     best_free = 0.
@@ -60,16 +60,16 @@ def get_best_gpu():
 # Iterate the whole dataset and count the numbers
 # CelebA contains about 200k examples with 128 tfrecord files and it takes about 1.5s to iterate
 def num_examples_from_tfrecords(tfrecords_list):
-    num_examples = 0 
+    num_examples = 0
     for path in tfrecords_list:
         num_examples += sum(1 for _ in tf.python_io.tf_record_iterator(path))
     return num_examples
 
 
 def expected_shape(tensor, expected):
-    """batch size N shouldn't be set. 
+    """batch size N shouldn't be set.
     you can use shape of tensor instead of tensor itself.
-    
+
     Usage:
     # batch size N is skipped.
     expected_shape(tensor, [28, 28, 1])
@@ -86,15 +86,17 @@ def expected_shape(tensor, expected):
     #     warnings.warn('wrong shape {} (expected shape is {})'.format(shape, expected))
 
 
-def plot(samples, shape=(4,4), figratio=0.75):
+def plot(samples, shape=(2,2), figratio=0.75):
     """only for square-size samples
     wh = sqrt(samples.size)
     figratio: small-size = 0.75 (default) / big-size = 1.0
     """
+    import pdb
+    pdb.set_trace()
     if len(samples) != shape[0]*shape[1]:
         print("Error: # of samples = {} but shape is {}".format(len(samples), shape))
         return
-    
+
     h_figsize = shape[0] * figratio
     w_figsize = shape[1] * figratio
     fig = plt.figure(figsize=(w_figsize, h_figsize))

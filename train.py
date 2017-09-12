@@ -7,7 +7,7 @@ import inputpipe as ip
 import glob, os
 from argparse import ArgumentParser
 import utils, config
-
+os.environ["CUDA_VISIBLE_DEVICES"] = '3'
 
 def build_parser():
     parser = ArgumentParser()
@@ -53,8 +53,9 @@ def train(model, input_op, num_epochs, batch_size, n_examples, renew=False):
         tf.gfile.MakeDirs(ckpt_path)
 
     config = tf.ConfigProto()
-    best_gpu = utils.get_best_gpu()
-    config.gpu_options.visible_device_list = str(best_gpu) # Works same as CUDA_VISIBLE_DEVICES!
+    config.gpu_options.allow_growth = True
+    
+     # Works same as CUDA_VISIBLE_DEVICES!
     with tf.Session(config=config) as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer()) # for epochs 
@@ -69,7 +70,7 @@ def train(model, input_op, num_epochs, batch_size, n_examples, renew=False):
         # It seems that batch_size should have been contained in the model config ... 
         config_list = [('batch_size', batch_size), ('dataset', FLAGS.dataset)]
         model_config_list = [[k, str(w)] for k, w in sorted(model.args.items()) + config_list]
-        model_config_summary_op = tf.summary.text('config', tf.convert_to_tensor(model_config_list), collections=[])
+        model_config_summary_op = tf.summary.text('config', tf.convert_to_tensor(model_config_list), collections=[]) #change the text into scaler as my tensorflow version is r1.0
         model_config_summary = sess.run(model_config_summary_op)
 
         summary_writer = tf.summary.FileWriter(summary_path, flush_secs=30, graph=sess.graph)
