@@ -5,7 +5,10 @@ import utils
 import config
 import os, glob
 import scipy.misc
+import cv2
 from argparse import ArgumentParser
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+
 slim = tf.contrib.slim
 
 
@@ -14,12 +17,17 @@ def build_parser():
     models_str = ' / '.join(config.model_zoo)
     parser.add_argument('--model', help=models_str, required=True) 
     parser.add_argument('--name', help='default: name=model')
+    parser.add_argument('--sample_size','-N',help='# of samples.It should be a square number. (default: 16)'),default=16,type=int)
 
     return parser
 
 
 def sample_z(shape):
-    return np.random.normal(size=shape)
+    img = cv2.imread('/home/xujinchang/share/project/GAN/tf.gans-comparison/1.png',0)
+    img = img / 127.5 - 1.0 
+    return cv2.resize(img,(64,16))
+
+    # return np.random.normal(size=shape)
 
 
 def get_all_checkpoints(ckpt_dir, force=False):
@@ -61,7 +69,6 @@ def eval(model, name, sample_shape=[4,4], load_all_ckpt=True):
         size = sample_shape[0] * sample_shape[1]
 
         z_ = sample_z([size, model.z_dim])
-
         for v in ckpts:
             print("Evaluating {} ...".format(v))
             restorer.restore(sess, v)
@@ -96,5 +103,7 @@ if __name__ == "__main__":
         FLAGS.name = FLAGS.model.lower()
     config.pprint_args(FLAGS)
 
+    N = FLAGS.sample_size**0.5
+    assert N == int(N), 'sample size should be a square number'
     model = config.get_model(FLAGS.model, FLAGS.name, training=False)
-    eval(model, name=FLAGS.name, sample_shape=[4,4], load_all_ckpt=True)
+    eval(model, name=FLAGS.name, sample_shape=[int(N),int(N)], load_all_ckpt=True)
