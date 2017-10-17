@@ -21,8 +21,9 @@ class BEGAN(BaseModel):
         with tf.variable_scope(self.name):
 
             X = tf.placeholder(tf.float32, [None] + self.shape)
-            z = tf.placeholder(tf.float32, [None, self.z_dim])
+            z = tf.placeholder(tf.float32, [None] + self.z_dim])
             global_step = tf.Variable(0, name='global_step', trainable=False)
+
 
             G = self._generator(z)
             # Discriminator is not called an energy function in BEGAN. The naming is from EBGAN.
@@ -102,7 +103,7 @@ class BEGAN(BaseModel):
 
             with slim.arg_scope([slim.conv2d], kernel_size=[3,3], padding='SAME', activation_fn=tf.nn.elu):
                 net = slim.conv2d(X, nf)
-
+                
                 net = slim.conv2d(net, nf)
                 net = slim.conv2d(net, nf)
                 net = slim.conv2d(net, nf*2, stride=2) # 32x32
@@ -133,6 +134,8 @@ class BEGAN(BaseModel):
             net = tf.reshape(h0, [-1, 8, 8, nf])
 
             with slim.arg_scope([slim.conv2d], kernel_size=[3,3], padding='SAME', activation_fn=tf.nn.elu):
+                import pdb
+                pdb.set_trace()
                 net = slim.conv2d(net, nf)
                 net = slim.conv2d(net, nf)
                 net = tf.image.resize_nearest_neighbor(net, [16, 16]) # upsampling
