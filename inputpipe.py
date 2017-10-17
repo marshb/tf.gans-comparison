@@ -12,17 +12,24 @@ def read_parse_preproc(filename_queue):
         features = tf.parse_single_example(
             records,
             features={
-                "image": tf.FixedLenFeature([], tf.string)
+                "image_LR": tf.FixedLenFeature([], tf.string),
+                "image_HR": tf.FixedLenFeature([], tf.string)
             }
         )
 
-        image = tf.decode_raw(features["image"], tf.uint8)
-        image = tf.reshape(image, [64, 64, 3]) # The image_shape must be explicitly specified
-        image = tf.image.resize_images(image, [64, 64])
-        image = tf.cast(image, tf.float32)
-        image = image / 127.5 - 1.0 # preproc - normalize
-        
-        return [image]
+        image_HR = tf.decode_raw(features["image_HR"], tf.uint8)
+        image_HR = tf.reshape(image_HR, [64, 64, 3]) # The image_shape must be explicitly specified
+        image_HR = tf.image.resize_images(image_HR, [64, 64])
+        image_HR = tf.cast(image_HR, tf.float32)
+        image_HR = image_HR / 127.5 - 1.0 # preproc - normalize
+         
+
+        image_LR = tf.decode_raw(features["image_LR"], tf.uint8)
+        image_LR = tf.reshape(image_LR, [8, 8, 3]) # The image_shape must be explicitly specified
+        image_LR = tf.image.resize_images(image_LR, [8, 8])
+        image_LR = tf.cast(image_LR, tf.float32)
+        image_LR = image_LR / 127.5 - 1.0 # preproc - normalize
+        return [image_HR, image_LR]
 
 
 # https://www.tensorflow.org/programmers_guide/reading_data
@@ -36,13 +43,13 @@ def get_batch(tfrecords_list, batch_size, shuffle=False, num_threads=1, min_afte
             min_after_dequeue = batch_size * 10
         capacity = min_after_dequeue + 3*batch_size
         if shuffle:
-            batch = tf.train.shuffle_batch(data_point, batch_size=batch_size, capacity=capacity, 
+            batch_HR, batch_LR = tf.train.shuffle_batch(data_point, batch_size=batch_size, capacity=capacity, 
                 min_after_dequeue=min_after_dequeue, num_threads=num_threads, allow_smaller_final_batch=True)
         else:
-            batch = tf.train.batch(data_point, batch_size, capacity=capacity, num_threads=num_threads, 
+            batch_HR, batch_LR = tf.train.batch(data_point, batch_size, capacity=capacity, num_threads=num_threads, 
                 allow_smaller_final_batch=True)
         
-        return batch
+        return batch_HR, batch_LR
 
 
 def get_batch_join(tfrecords_list, batch_size, shuffle=False, num_threads=1, min_after_dequeue=None, num_epochs=None):
