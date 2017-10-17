@@ -27,7 +27,7 @@ class WGAN_GP(BaseModel):
         with tf.variable_scope(self.name):
             # change by xjc z_dim 64 -> [8,8,3]
             X = tf.placeholder(tf.float32, [None] + self.shape)
-            z = tf.placeholder(tf.float32, [None] + self.z_dim])
+            z = tf.placeholder(tf.float32, [None] + self.z_dim)
             global_step = tf.Variable(0, name='global_step', trainable=False)
 
             # `critic` named from wgan (wgan-gp use the term `discriminator` rather than `critic`)

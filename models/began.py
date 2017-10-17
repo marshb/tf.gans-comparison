@@ -21,7 +21,7 @@ class BEGAN(BaseModel):
         with tf.variable_scope(self.name):
 
             X = tf.placeholder(tf.float32, [None] + self.shape)
-            z = tf.placeholder(tf.float32, [None] + self.z_dim])
+            z = tf.placeholder(tf.float32, [None] + self.z_dim)
             global_step = tf.Variable(0, name='global_step', trainable=False)
 
 
