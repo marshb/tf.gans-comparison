@@ -15,7 +15,7 @@ Instead of weight clipping, WGAN-GP proposed gradient penalty.
 '''
 
 class WGAN_GP(BaseModel):
-    def __init__(self, name, training, D_lr=1e-4, G_lr=1e-4, image_shape=[64, 64, 3], z_dim=100):
+    def __init__(self, name, training, D_lr=1e-4, G_lr=1e-4, image_shape=[64, 64, 3], z_dim=[8,8,3]):
         self.beta1 = 0.0
         self.beta2 = 0.9
         self.ld = 10. # lambda
@@ -25,8 +25,9 @@ class WGAN_GP(BaseModel):
 
     def _build_train_graph(self):
         with tf.variable_scope(self.name):
+            # change by xjc z_dim 64 -> [8,8,3]
             X = tf.placeholder(tf.float32, [None] + self.shape)
-            z = tf.placeholder(tf.float32, [None, self.z_dim])
+            z = tf.placeholder(tf.float32, [None] + self.z_dim])
             global_step = tf.Variable(0, name='global_step', trainable=False)
 
             # `critic` named from wgan (wgan-gp use the term `discriminator` rather than `critic`)
@@ -172,6 +173,8 @@ class WGAN_GP(BaseModel):
     def _good_generator(self, z, reuse=False):
         with tf.variable_scope('generator', reuse=reuse):
             nf = 64
+            # add by xjc change z to an image
+            z = slim.flatten(z)
             net = slim.fully_connected(z, 4*4*8*nf, activation_fn=None) # 4x4x512
             net = tf.reshape(net, [-1, 4, 4, 8*nf])
             net = self._residual_block(net, 8*nf, resample='up', name='res_block1') # 8x8x512
