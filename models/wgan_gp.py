@@ -41,7 +41,7 @@ class WGAN_GP(BaseModel):
 
             # add by xjc MSE_loss
             MSE_loss = tf.reduce_mean(slim.losses.mean_squared_error(predictions=G, labels=X, weights=1.0)) 
-            
+            G_loss += MSE_Loss
             # Gradient Penalty (GP)
             eps = tf.random_uniform(shape=[tf.shape(X)[0], 1, 1, 1], minval=0., maxval=1.)
             x_hat = eps*X + (1.-eps)*G 
