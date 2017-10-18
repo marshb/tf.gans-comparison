@@ -39,6 +39,9 @@ class WGAN_GP(BaseModel):
             C_loss = -W_dist
             G_loss = tf.reduce_mean(-C_fake)
 
+            # add by xjc MSE_loss
+            MSE_loss = tf.reduce_mean(slim.losses.mean_squared_error(predictions=G, labels=X, weights=1.0)) 
+            
             # Gradient Penalty (GP)
             eps = tf.random_uniform(shape=[tf.shape(X)[0], 1, 1, 1], minval=0., maxval=1.)
             x_hat = eps*X + (1.-eps)*G 
@@ -67,6 +70,7 @@ class WGAN_GP(BaseModel):
             # per-step summary
             self.summary_op = tf.summary.merge([
                 tf.summary.scalar('G_loss', G_loss),
+                tf.summary.scalar('MSE_loss', MSE_loss),
                 tf.summary.scalar('C_loss', C_loss),
                 tf.summary.scalar('W_dist', W_dist),
                 tf.summary.scalar('GP', GP)
