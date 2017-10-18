@@ -17,17 +17,33 @@ def build_parser():
     models_str = ' / '.join(config.model_zoo)
     parser.add_argument('--model', help=models_str, required=True) 
     parser.add_argument('--name', help='default: name=model')
-    parser.add_argument('--sample_size','-N',help='# of samples.It should be a square number. (default: 16)'),default=16,type=int)
+    parser.add_argument('--sample_size','-N',help='# of samples.It should be a square number. (default: 16)',default=16,type=int)
 
     return parser
 
+def pre_precess_LR(im, crop_size):
+    output_height, output_width = crop_size
+    h, w = im.shape[:2]
+    if h < output_height and w < output_width:
+        raise ValueError("image is small")
+
+    offset_h = int((h - output_height) / 2)
+    offset_w = int((w - output_width) / 2)
+    im = im[offset_h:offset_h+output_height, offset_w:offset_w+output_width, :]
+    im_LR = scipy.misc.imresize(im,[8,8])
+    im_HR = scipy.misc.imresize(im,[64,64])
+    im_LR = np.reshape(im_LR, [-1, 8, 8, 3])
+    
+
+    return im_LR
+
 
 def sample_z(shape):
-    img = cv2.imread('/home/xujinchang/share/project/GAN/tf.gans-comparison/1.png',0)
-    img = img / 127.5 - 1.0 
-    return cv2.resize(img,(64,16))
+    # img = cv2.imread('/home/xujinchang/share/project/GAN/tf.gans-comparison/1.png',0)
+    # img = img / 127.5 - 1.0 
+    # return cv2.resize(img,(64,16))
 
-    # return np.random.normal(size=shape)
+    return np.random.normal(size=shape)
 
 
 def get_all_checkpoints(ckpt_dir, force=False):
@@ -50,7 +66,7 @@ def get_all_checkpoints(ckpt_dir, force=False):
     return ckpts
 
 
-def eval(model, name, sample_shape=[4,4], load_all_ckpt=True):
+def eval(model, name, sample_shape=[1,1], load_all_ckpt=True):
     if name == None:
         name = model.name
     dir_name = 'eval/' + name
@@ -68,7 +84,12 @@ def eval(model, name, sample_shape=[4,4], load_all_ckpt=True):
         ckpts = get_all_checkpoints('./checkpoints/' + name, force=load_all_ckpt)
         size = sample_shape[0] * sample_shape[1]
 
-        z_ = sample_z([size, model.z_dim])
+        # z_ = sample_z([size, 64])
+        # import pdb
+        # pdb.set_trace()
+        im = scipy.misc.imread('/home/xujinchang/share/project/GAN/tf.gans-comparison/image25_1629_578_88.jpg', mode='RGB')
+        z_ = pre_precess_LR(im,[128,128])
+        z_ = z_ / 127.5 - 1.0
         for v in ckpts:
             print("Evaluating {} ...".format(v))
             restorer.restore(sess, v)
@@ -106,4 +127,4 @@ if __name__ == "__main__":
     N = FLAGS.sample_size**0.5
     assert N == int(N), 'sample size should be a square number'
     model = config.get_model(FLAGS.model, FLAGS.name, training=False)
-    eval(model, name=FLAGS.name, sample_shape=[int(N),int(N)], load_all_ckpt=True)
+    eval(model, name=FLAGS.name, sample_shape=[1,1], load_all_ckpt=True)
