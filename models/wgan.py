@@ -14,7 +14,7 @@ J = min WD (G_loss)
 '''
 
 class WGAN(BaseModel):
-    def __init__(self, name, training, D_lr=5e-5, G_lr=5e-5, image_shape=[64, 64, 3], z_dim=100):
+    def __init__(self, name, training, D_lr=5e-5, G_lr=5e-5, image_shape=[128, 128, 3], z_dim=[64,64,3]):
         self.ld = 10. # lambda
         self.n_critic = 5
         super(WGAN, self).__init__(name=name, training=training, D_lr=D_lr, G_lr=G_lr, 
@@ -23,7 +23,7 @@ class WGAN(BaseModel):
     def _build_train_graph(self):
         with tf.variable_scope(self.name):
             X = tf.placeholder(tf.float32, [None] + self.shape)
-            z = tf.placeholder(tf.float32, [None, self.z_dim])
+            z = tf.placeholder(tf.float32, [None] + self.z_dim)
             global_step = tf.Variable(0, name='global_step', trainable=False)
 
             G = self._generator(z)
@@ -99,13 +99,13 @@ class WGAN(BaseModel):
             with slim.arg_scope([slim.conv2d], kernel_size=[5,5], stride=2, activation_fn=ops.lrelu, 
                 normalizer_fn=slim.batch_norm, normalizer_params=self.bn_params):
                 net = slim.conv2d(net, 64, normalizer_fn=None)
-                expected_shape(net, [32, 32, 64])
+                expected_shape(net, [64, 64, 64])
                 net = slim.conv2d(net, 128)
-                expected_shape(net, [16, 16, 128])
+                expected_shape(net, [32, 32, 128])
                 net = slim.conv2d(net, 256)
-                expected_shape(net, [8, 8, 256])
+                expected_shape(net, [16, 16, 256])
                 net = slim.conv2d(net, 512)
-                expected_shape(net, [4, 4, 512])
+                expected_shape(net, [8, 8, 512])
 
             net = slim.flatten(net)
             net = slim.fully_connected(net, 1, activation_fn=None)
@@ -114,19 +114,22 @@ class WGAN(BaseModel):
 
     def _generator(self, z, reuse=False):
         with tf.variable_scope('generator', reuse=reuse):
+            import pdb
+            pdb.set_trace()
             net = z
-            net = slim.fully_connected(net, 4*4*1024, activation_fn=tf.nn.relu)
-            net = tf.reshape(net, [-1, 4, 4, 1024])
+            net = slim.flatten(net)
+            net = slim.fully_connected(net, 8*8*1024, activation_fn=tf.nn.relu)
+            net = tf.reshape(net, [-1, 8, 8, 1024])
 
             with slim.arg_scope([slim.conv2d_transpose], kernel_size=[5,5], stride=2, activation_fn=tf.nn.relu, 
                 normalizer_fn=slim.batch_norm, normalizer_params=self.bn_params):
                 net = slim.conv2d_transpose(net, 512)
-                expected_shape(net, [8, 8, 512])
+                expected_shape(net, [16, 16, 512])
                 net = slim.conv2d_transpose(net, 256)
-                expected_shape(net, [16, 16, 256])
+                expected_shape(net, [32, 32, 256])
                 net = slim.conv2d_transpose(net, 128)
-                expected_shape(net, [32, 32, 128])
+                expected_shape(net, [64, 64, 128])
                 net = slim.conv2d_transpose(net, 3, activation_fn=tf.nn.tanh, normalizer_fn=None)
-                expected_shape(net, [64, 64, 3])
+                expected_shape(net, [128, 128, 3])
 
                 return net

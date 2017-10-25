@@ -29,23 +29,33 @@ class WGAN_GP(BaseModel):
             X = tf.placeholder(tf.float32, [None] + self.shape)
             z = tf.placeholder(tf.float32, [None] + self.z_dim)
             global_step = tf.Variable(0, name='global_step', trainable=False)
-
             # `critic` named from wgan (wgan-gp use the term `discriminator` rather than `critic`)
             G = self._generator(z)
-            C_real = self._critic(X)
-            C_fake = self._critic(G, reuse=True)
+            C_real, fea_X = self._critic(X)
+            C_fake, fea_G = self._critic(G, reuse=True)
 
             W_dist = tf.reduce_mean(C_real - C_fake)
-            C_loss = -W_dist
-            G_loss = tf.reduce_mean(-C_fake)
 
+
+            fea_X_norm = tf.divide(fea_X, tf.norm(fea_X, ord = 'euclidean'))
+            fea_G_norm = tf.divide(fea_G, tf.norm(fea_G, ord = 'euclidean'))
+            L2_dist = tf.sqrt(tf.reduce_sum(tf.square(fea_X - fea_G)))   #(batch,1)
+            
+            # tf.norm(slim.flatten(C_xhat_grad), axis=1)p
+            
+            gen_l1_cost = tf.reduce_mean(tf.abs(G - X))
+            gen_l2_cost = tf.sqrt(tf.reduce_sum(tf.square(G - X)))
+            C_loss = -W_dist
+            #- L2_dist
+            
+            G_loss = (1 - 0.8) * tf.reduce_mean(-C_fake) + 0.8 * gen_l2_cost
             # add by xjc MSE_loss
-            MSE_loss = tf.reduce_mean(slim.losses.mean_squared_error(predictions=G, labels=X, weights=1.0)) 
-            G_loss += MSE_Loss
+            # MSE_loss = tf.reduce_mean(slim.losses.mean_squared_error(predictions=G, labels=X, weights=1.0)) 
+            # G_loss += MSE_loss
             # Gradient Penalty (GP)
             eps = tf.random_uniform(shape=[tf.shape(X)[0], 1, 1, 1], minval=0., maxval=1.)
             x_hat = eps*X + (1.-eps)*G 
-            C_xhat = self._critic(x_hat, reuse=True)
+            C_xhat, _ = self._critic(x_hat, reuse=True)
             C_xhat_grad = tf.gradients(C_xhat, x_hat)[0] # gradient of D(x_hat)
             C_xhat_grad_norm = tf.norm(slim.flatten(C_xhat_grad), axis=1)  # l2 norm
             GP = self.ld * tf.reduce_mean(tf.square(C_xhat_grad_norm - 1.))
@@ -70,7 +80,9 @@ class WGAN_GP(BaseModel):
             # per-step summary
             self.summary_op = tf.summary.merge([
                 tf.summary.scalar('G_loss', G_loss),
-                tf.summary.scalar('MSE_loss', MSE_loss),
+                tf.summary.scalar(' L2_dist', L2_dist),
+                tf.summary.scalar(' L1_dist', gen_l1_cost),
+                # tf.summary.scalar('MSE_loss', MSE_loss),
                 tf.summary.scalar('C_loss', C_loss),
                 tf.summary.scalar('W_dist', W_dist),
                 tf.summary.scalar('GP', GP)
@@ -174,10 +186,50 @@ class WGAN_GP(BaseModel):
             else:
                 raise Exception('invalid resample value')
 
+    # def _good_generator(self, z, reuse=False):
+    #     with tf.variable_scope('generator', reuse=reuse):
+    #         nf = 64
+    #         # add by xjc change z to an image
+    #         net = slim.conv2d(z, nf, [3,3], activation_fn=None)
+    #         net = slim.conv2d(net, 2*nf, [3,3], activation_fn=None)
+    #         net = slim.conv2d(net, 4*nf, [3,3], activation_fn=None)
+    #         net = slim.conv2d(net, 8*nf, [3,3], activation_fn=None)
+    #         # z = slim.flatten(net)
+    #         # net = slim.fully_connected(z, 4*4*8*nf, activation_fn=None) # 4x4x512
+    #         # net = tf.reshape(net, [-1, 4, 4, 8*nf])
+    #         # net = self._residual_block(net, 8*nf, resample='up', name='res_block1') # 8x8x512
+    #         net = self._residual_block(net, 4*nf, resample='up', name='res_block2') # 16x16x256
+    #         net = self._residual_block(net, 2*nf, resample='up', name='res_block3') # 32x32x128
+    #         net = self._residual_block(net, 1*nf, resample='up', name='res_block4') # 64x64x64
+    #         expected_shape(net, [64, 64, 64])
+    #         net = slim.batch_norm(net, activation_fn=tf.nn.relu, **self.bn_params)
+    #         net = slim.conv2d(net, 3, kernel_size=[3,3], activation_fn=tf.nn.tanh)
+    #         expected_shape(net, [64, 64, 3])
+
+    #         return net
+
+    def _good_critic(self, X, reuse=False):
+        with tf.variable_scope('critic', reuse=reuse):
+            nf = 64
+            net = slim.conv2d(X, nf, [3,3], activation_fn=None) # 64x64x64
+            net = self._residual_block(net, 2*nf, resample='down', name='res_block1') # 32x32x128
+            net = self._residual_block(net, 4*nf, resample='down', name='res_block2') # 16x16x256
+            net = self._residual_block(net, 8*nf, resample='down', name='res_block3') # 8x8x512
+            net = self._residual_block(net, 8*nf, resample='down', name='res_block4') # 4x4x512
+            expected_shape(net, [4, 4, 512])
+            # add by xjc  add a bottleneck layer
+            net = slim.flatten(net)
+            bottleneck = slim.fully_connected(net, 128, activation_fn=None)
+            label = slim.fully_connected(bottleneck, 1, activation_fn=None)
+
+            return label, bottleneck
+
+
     def _good_generator(self, z, reuse=False):
         with tf.variable_scope('generator', reuse=reuse):
             nf = 64
             # add by xjc change z to an image
+            # net = slim.conv2d(z, nf, [3,3], activation_fn=None)
             z = slim.flatten(z)
             net = slim.fully_connected(z, 4*4*8*nf, activation_fn=None) # 4x4x512
             net = tf.reshape(net, [-1, 4, 4, 8*nf])
@@ -192,16 +244,18 @@ class WGAN_GP(BaseModel):
 
             return net
 
-    def _good_critic(self, X, reuse=False):
-        with tf.variable_scope('critic', reuse=reuse):
-            nf = 64
-            net = slim.conv2d(X, nf, [3,3], activation_fn=None) # 64x64x64
-            net = self._residual_block(net, 2*nf, resample='down', name='res_block1') # 32x32x128
-            net = self._residual_block(net, 4*nf, resample='down', name='res_block2') # 16x16x256
-            net = self._residual_block(net, 8*nf, resample='down', name='res_block3') # 8x8x512
-            net = self._residual_block(net, 8*nf, resample='down', name='res_block4') # 4x4x512
-            expected_shape(net, [4, 4, 512])
-            net = slim.flatten(net)
-            net = slim.fully_connected(net, 1, activation_fn=None)
+    # def _good_critic(self, X, reuse=False):
+    #     with tf.variable_scope('critic', reuse=reuse):
+    #         nf = 64
+    #         net = slim.conv2d(X, nf, [3,3], activation_fn=None) # 64x64x64
+    #         net = self._residual_block(net, 2*nf, resample='down', name='res_block1') # 32x32x128
+    #         net = self._residual_block(net, 4*nf, resample='down', name='res_block2') # 16x16x256
+    #         net = self._residual_block(net, 8*nf, resample='down', name='res_block3') # 8x8x512
+    #         net = self._residual_block(net, 8*nf, resample='down', name='res_block4') # 4x4x512
+    #         expected_shape(net, [4, 4, 512])
+    #         # add by xjc  add a bottleneck layer
+    #         net = slim.flatten(net)
+    #         bottleneck = slim.fully_connected(net, 128, activation_fn=None)
+    #         label = slim.fully_connected(bottleneck, 1, activation_fn=None)
 
-            return net
+    #         return label, bottleneck

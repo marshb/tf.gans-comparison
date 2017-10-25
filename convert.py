@@ -81,10 +81,13 @@ def convert(source_dir, target_dir, crop_size, out_size, exts=[''], num_shards=1
             print("[Exception] {}".format(e))
             continue
 
-        im = scipy.misc.imresize(im, out_size)
+        # im_LR = scipy.misc.imresize(im,[8,8])
+        im_LR = scipy.misc.imresize(im, [64,64])
+        im_HR = scipy.misc.imresize(im, out_size)
+
         example = tf.train.Example(features=tf.train.Features(feature={
-            # "shape": _int64_features(im.shape),
-            "image": _bytes_features([im.tostring()])
+            "image_LR": _bytes_features([im_LR.tostring()]),
+            "image_HR": _bytes_features([im_HR.tostring()])
         }))
         writer.write(example.SerializeToString())
 
@@ -122,7 +125,7 @@ def export_images(db_path, out_dir, flat=False, limit=-1):
 
 if __name__ == "__main__":
     # CelebA
-     convert('./data/celebA', '/home/xujinchang/GAN_celeA/celebA_tfrecords_test', crop_size=[128, 128], out_size=[64, 64], 
+     convert('./data/celebA', '/home/xujinchang/GAN_celeA_LR_HR/celebA_tfrecords_64_128', crop_size=[150, 150], out_size=[128, 128], 
          exts=['jpg'], num_shards=128, tfrecords_prefix='celebA')
 
     # LSUN

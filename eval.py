@@ -15,7 +15,7 @@ slim = tf.contrib.slim
 def build_parser():
     parser = ArgumentParser()
     models_str = ' / '.join(config.model_zoo)
-    parser.add_argument('--model', help=models_str, required=True) 
+    parser.add_argument('--model', help=models_str, required=True)
     parser.add_argument('--name', help='default: name=model')
     parser.add_argument('--sample_size','-N',help='# of samples.It should be a square number. (default: 16)',default=16,type=int)
 
@@ -33,14 +33,14 @@ def pre_precess_LR(im, crop_size):
     im_LR = scipy.misc.imresize(im,[8,8])
     im_HR = scipy.misc.imresize(im,[64,64])
     im_LR = np.reshape(im_LR, [-1, 8, 8, 3])
-    
+
 
     return im_LR
 
 
 def sample_z(shape):
     # img = cv2.imread('/home/xujinchang/share/project/GAN/tf.gans-comparison/1.png',0)
-    # img = img / 127.5 - 1.0 
+    # img = img / 127.5 - 1.0
     # return cv2.resize(img,(64,16))
 
     return np.random.normal(size=shape)
@@ -48,8 +48,8 @@ def sample_z(shape):
 
 def get_all_checkpoints(ckpt_dir, force=False):
     '''
-    When the learning is interrupted and resumed, all checkpoints can not be fetched with get_checkpoint_state 
-    (The checkpoint state is rewritten from the point of resume). 
+    When the learning is interrupted and resumed, all checkpoints can not be fetched with get_checkpoint_state
+    (The checkpoint state is rewritten from the point of resume).
     This function fetch all checkpoints forcely when arguments force=True.
     '''
 
@@ -62,7 +62,7 @@ def get_all_checkpoints(ckpt_dir, force=False):
         ckpts = map(lambda x: os.path.join(ckpt_dir, x), ckpts) # fn => path
     else:
         ckpts = tf.train.get_checkpoint_state(ckpt_dir).all_model_checkpoint_paths
-    
+
     return ckpts
 
 
@@ -87,15 +87,15 @@ def eval(model, name, sample_shape=[1,1], load_all_ckpt=True):
         # z_ = sample_z([size, 64])
         # import pdb
         # pdb.set_trace()
-        im = scipy.misc.imread('/home/xujinchang/share/project/GAN/tf.gans-comparison/image25_1629_578_88.jpg', mode='RGB')
+        im = scipy.misc.imread('/home/xujinchang/share/project/GAN/tf.gans-comparison/111000.jpg', mode='RGB')
         z_ = pre_precess_LR(im,[128,128])
         z_ = z_ / 127.5 - 1.0
         for v in ckpts:
             print("Evaluating {} ...".format(v))
             restorer.restore(sess, v)
             global_step = int(v.split('/')[-1].split('-')[-1])
-            
-            fake_samples = sess.run(model.fake_sample, {model.z: z_})            
+
+            fake_samples = sess.run(model.fake_sample, {model.z: z_})
 
             # inverse transform: [-1, 1] => [0, 1]
             fake_samples = (fake_samples + 1.) / 2.

@@ -7,7 +7,7 @@ from basemodel import BaseModel
 
 
 class EBGAN(BaseModel):
-    def __init__(self, name, training, D_lr=1e-3, G_lr=1e-3, image_shape=[64, 64, 3], z_dim=100, 
+    def __init__(self, name, training, D_lr=1e-3, G_lr=1e-3, image_shape=[64, 64, 3], z_dim=[8,8,3], 
         pt_weight=0.0, margin=20.):
         ''' The default value of pt_weight and margin is taken from the paper for celebA. '''
         self.pt_weight = pt_weight
@@ -19,7 +19,7 @@ class EBGAN(BaseModel):
     def _build_train_graph(self):
         with tf.variable_scope(self.name):
             X = tf.placeholder(tf.float32, [None] + self.shape)
-            z = tf.placeholder(tf.float32, [None, self.z_dim])
+            z = tf.placeholder(tf.float32, [None] + self.z_dim])
             global_step = tf.Variable(0, name='global_step', trainable=False)
 
             G = self._generator(z)
@@ -29,10 +29,15 @@ class EBGAN(BaseModel):
             D_fake_hinge = tf.maximum(0., self.m - D_fake_energy) # hinge_loss
             D_loss = D_real_energy + D_fake_hinge
             G_loss = D_fake_energy
+            #add by xjc
+
+            gen_l1_cost = tf.reduce_mean(tf.abs(G - X))
+            gen_l2_cost = tf.sqrt(tf.reduce_sum(tf.square(G - X)))
+
             PT = self.pt_regularizer(D_fake_latent)
             pt_loss = self.pt_weight * PT
             G_loss += pt_loss
-
+            print self.pt_weight
             D_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name+'/D/')
             G_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name+'/G/')
 

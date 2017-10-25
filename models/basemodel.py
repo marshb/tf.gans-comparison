@@ -10,7 +10,7 @@ slim = tf.contrib.slim
 class BaseModel(object):
     FAKE_MAX_OUTPUT = 6
 
-    def __init__(self, name, training, D_lr, G_lr, image_shape=[64, 64, 3], z_dim=[8,8,3]):
+    def __init__(self, name, training, D_lr, G_lr, image_shape=[128, 128, 3], z_dim=[64,64,3]):
         self.name = name
         self.shape = image_shape
         self.bn_params = {
